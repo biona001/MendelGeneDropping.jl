@@ -460,6 +460,10 @@ the universe of possible ordered genotypes.
 """
 function random_genotype(frequency::Vector{Float64}, xlinked::Bool, male::Bool)
 
+  if !isapprox(sum(frequency), 1.0)
+    throw(ArgumentError("frequencies does not sum to 1.\n"))
+  end
+
   if xlinked && male
     i = random_category(frequency)
     return [i i]

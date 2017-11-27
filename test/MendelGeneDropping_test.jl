@@ -4,7 +4,6 @@ using MendelGeneDropping
 
 srand(123)
 
-
 @testset "founder_source" begin
     keyword = set_keyword_defaults!(Dict{AbstractString, Any}())
     keyword["gene_drop_output"] = "Unordered"
@@ -72,6 +71,28 @@ srand(123)
     # need test cases for gene_drop_output == "Population"
 end
 
+@testset "random_genotype" begin
+    x = [0.0, 0.0, 1.0]
+    y = [0.7, 0.2, 0.1]
+    z = [0.5, 0.5, 0.5]
+
+    @test MendelGeneDropping.random_genotype(x, true, true) == [3 3]
+    @test MendelGeneDropping.random_genotype(x, true, false) == [3 3]
+    @test MendelGeneDropping.random_genotype(x, false, true) == [3 3]
+    @test MendelGeneDropping.random_genotype(x, false, false) == [3 3]
+
+    @test MendelGeneDropping.random_genotype(y, true, true) == [1 1]
+    @test MendelGeneDropping.random_genotype(y, true, false) == [1 1]
+    @test MendelGeneDropping.random_genotype(y, false, true) == [1 1]
+    @test MendelGeneDropping.random_genotype(y, false, false) == [1 3]
+
+    @test_throws(ArgumentError, MendelGeneDropping.random_genotype(z, false, false))
+end
+
+@testset "choose_genotype" begin
+    
+end
+
 @testset "simulate_genotypes" begin
     keyword = set_keyword_defaults!(Dict{AbstractString, Any}())
     keyword["gene_drop_output"] = "Unordered"
@@ -93,13 +114,6 @@ end
 
 end
 
-@testset "choose_genotype" begin
-    
-end
-
-@testset "random_genotype" begin
-    
-end
 
 @testset "convert_sampled_genotype" begin
     
