@@ -414,6 +414,9 @@ it returns a completely random genotype.
 """
 function choose_genotype(frequency::Vector{Float64},
   genotype_set::Set{Tuple{Int, Int}}, xlinked::Bool, male::Bool)
+  if !isapprox(sum(frequency), 1.0)
+    throw(ArgumentError("frequencies does not sum to 1.\n"))
+  end
 
   if length(genotype_set) == 0
     return random_genotype(frequency, xlinked, male)

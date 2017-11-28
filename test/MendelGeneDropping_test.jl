@@ -72,25 +72,144 @@ srand(123)
 end
 
 @testset "random_genotype" begin
-    x = [0.0, 0.0, 1.0]
-    y = [0.7, 0.2, 0.1]
-    z = [0.5, 0.5, 0.5]
+    x = [0.7, 0.2, 0.1]
+    y = [0.5, 0.5, 0.5]
+    z = [NaN, Inf]
+    z2 = ["hi there"]
 
-    @test MendelGeneDropping.random_genotype(x, true, true) == [3 3]
-    @test MendelGeneDropping.random_genotype(x, true, false) == [3 3]
-    @test MendelGeneDropping.random_genotype(x, false, true) == [3 3]
-    @test MendelGeneDropping.random_genotype(x, false, false) == [3 3]
+    cat_1, cat_2, cat_3 = 0, 0, 0
+    cat_4, cat_5, cat_6 = 0, 0, 0
+    cat_7, cat_8, cat_9 = 0, 0, 0
+    for i in 1:100000
+        test = MendelGeneDropping.random_genotype(x, true, true)
+        if test == [1 1] cat_1 += 1 end
+        if test == [1 2] cat_2 += 1 end
+        if test == [1 3] cat_3 += 1 end
+        if test == [2 1] cat_4 += 1 end
+        if test == [2 2] cat_5 += 1 end
+        if test == [2 3] cat_6 += 1 end
+        if test == [3 1] cat_7 += 1 end
+        if test == [3 2] cat_8 += 1 end
+        if test == [3 3] cat_9 += 1 end                
+    end
 
-    @test MendelGeneDropping.random_genotype(y, true, true) == [1 1]
-    @test MendelGeneDropping.random_genotype(y, true, false) == [1 1]
-    @test MendelGeneDropping.random_genotype(y, false, true) == [1 1]
-    @test MendelGeneDropping.random_genotype(y, false, false) == [1 3]
+    #since male && xlinked, must have [i i] with probability around 0.7, 0.2, 0.1
+    @test round(cat_1/10000, 1) == 7   
+    @test round(cat_2/10000, 1) == 0
+    @test round(cat_3/10000, 1) == 0
+    @test round(cat_4/10000, 1) == 0    
+    @test round(cat_5/10000, 1) == 2
+    @test round(cat_6/10000, 1) == 0
+    @test round(cat_7/10000, 1) == 0    
+    @test round(cat_8/10000, 1) == 0
+    @test round(cat_9/10000, 1) == 1
 
+    cat_1, cat_2, cat_3 = 0, 0, 0
+    cat_4, cat_5, cat_6 = 0, 0, 0
+    cat_7, cat_8, cat_9 = 0, 0, 0
+    for i in 1:100000
+        test = MendelGeneDropping.random_genotype(x, false, true)
+        if test == [1 1] cat_1 += 1 end
+        if test == [1 2] cat_2 += 1 end
+        if test == [1 3] cat_3 += 1 end
+        if test == [2 1] cat_4 += 1 end
+        if test == [2 2] cat_5 += 1 end
+        if test == [2 3] cat_6 += 1 end
+        if test == [3 1] cat_7 += 1 end
+        if test == [3 2] cat_8 += 1 end
+        if test == [3 3] cat_9 += 1 end                
+    end
+
+    @test round(cat_1/100000, 2) == 0.49 #0.7 * 0.7
+    @test round(cat_2/100000, 2) == 0.14 #0.7 * 0.2
+    @test round(cat_3/100000, 2) == 0.07
+    @test round(cat_4/100000, 2) == 0.14  
+    @test round(cat_5/100000, 2) == 0.04
+    @test round(cat_6/100000, 2) == 0.02
+    @test round(cat_7/100000, 2) == 0.07
+    @test round(cat_8/100000, 2) == 0.02
+    @test round(cat_9/100000, 2) == 0.01
+
+    @test_throws(ArgumentError, MendelGeneDropping.random_genotype(y, false, false))
     @test_throws(ArgumentError, MendelGeneDropping.random_genotype(z, false, false))
+    @test_throws(MethodError, MendelGeneDropping.random_genotype(z2, false, false))
 end
 
 @testset "choose_genotype" begin
-    
+    x = [0.7, 0.2, 0.1]
+    y = [0.5, 0.5, 0.5]
+    z = [NaN, Inf]
+    z2 = ["hi there"]
+
+    genotype_set = Set{Tuple{Int64,Int64}}()
+    @test_throws(ArgumentError, MendelGeneDropping.choose_genotype(y, 
+        genotype_set, false, false))
+    @test_throws(ArgumentError, MendelGeneDropping.choose_genotype(z, 
+        genotype_set, false, false))
+    @test_throws(MethodError, MendelGeneDropping.choose_genotype(z2, 
+        genotype_set, false, false))
+
+    cat_1, cat_2, cat_3 = 0, 0, 0
+    cat_4, cat_5, cat_6 = 0, 0, 0
+    cat_7, cat_8, cat_9 = 0, 0, 0
+    for i in 1:100000
+        test = MendelGeneDropping.choose_genotype(x, genotype_set, false, false)
+        if test == [1 1] cat_1 += 1 end
+        if test == [1 2] cat_2 += 1 end
+        if test == [1 3] cat_3 += 1 end
+        if test == [2 1] cat_4 += 1 end
+        if test == [2 2] cat_5 += 1 end
+        if test == [2 3] cat_6 += 1 end
+        if test == [3 1] cat_7 += 1 end
+        if test == [3 2] cat_8 += 1 end
+        if test == [3 3] cat_9 += 1 end                
+    end
+
+    # everything is random because genotype_set is empty
+    @test round(cat_1/100000, 2) == 0.49 #0.7 * 0.7
+    @test round(cat_2/100000, 2) == 0.14 #0.7 * 0.2
+    @test round(cat_3/100000, 2) == 0.07
+    @test round(cat_4/100000, 2) == 0.14  
+    @test round(cat_5/100000, 2) == 0.04
+    @test round(cat_6/100000, 2) == 0.02
+    @test round(cat_7/100000, 2) == 0.07
+    @test round(cat_8/100000, 2) == 0.02
+    @test round(cat_9/100000, 2) == 0.01
+
+    x = [0.7, 0.1, 0.1, 0.1]
+    genotype_set = Set{Tuple{Int64,Int64}}([(1, 2), (1, 1), (3, 1), (2, 3)])
+    #first order the categories: (1, 1) (1, 2) (2, 3) (3, 1)
+    #P(category 1) = 0.7 * 0.7
+    #P(category 2) = 0.7 * 0.1
+    #P(category 3) = 0.1 * 0.1
+    #P(category 4) = 0.1 * 0.7
+    #thus after normalizing, we have 0.765 0.109 0.0156 0.109 
+
+    cat_1, cat_2, cat_3 = 0, 0, 0
+    cat_4, cat_5, cat_6 = 0, 0, 0
+    cat_7, cat_8, cat_9 = 0, 0, 0
+    for i in 1:100000
+        test = MendelGeneDropping.choose_genotype(x, genotype_set, false, false)
+        if test == [1 1] cat_1 += 1 end
+        if test == [1 2] cat_2 += 1 end
+        if test == [1 3] cat_3 += 1 end
+        if test == [2 1] cat_4 += 1 end
+        if test == [2 2] cat_5 += 1 end
+        if test == [2 3] cat_6 += 1 end
+        if test == [3 1] cat_7 += 1 end
+        if test == [3 2] cat_8 += 1 end
+        if test == [3 3] cat_9 += 1 end                
+    end
+
+    @test round(cat_1/100000, 2) == 0.76 # 1 1
+    @test round(cat_2/100000, 2) == 0.11 # 1 2
+    @test round(cat_3/100000, 2) == 0.0
+    @test round(cat_4/100000, 2) == 0.0 
+    @test round(cat_5/100000, 2) == 0.0
+    @test round(cat_6/100000, 2) == 0.02 # 2 3
+    @test round(cat_7/100000, 2) == 0.11 # 3 1
+    @test round(cat_8/100000, 2) == 0.0
+    @test round(cat_9/100000, 2) == 0.0
 end
 
 @testset "simulate_genotypes" begin
