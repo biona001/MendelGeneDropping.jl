@@ -23,7 +23,7 @@ srand(123)
     @test size(bush_matrix) == (2, 6, 4) #bush family have 6 people and 4 locus (instead of 5)
     @test eltype(bush_matrix) == Int64
 
-    #1st locus (ABO) not xlinked, so each person (columns) should have 2 source
+    #1st locus (Rh) not xlinked, so each person (columns) should have 2 source
     @test bush_matrix[:, 1, 1] == [1, 2]
     @test bush_matrix[:, 2, 1] == [3, 4]
     @test bush_matrix[:, 3, 1] == [5, 6]
@@ -31,7 +31,7 @@ srand(123)
     @test bush_matrix[:, 5, 1] == [0, 0]
     @test bush_matrix[:, 6, 1] == [0, 0]
 
-    # 2nd locus (Rh) = 1st locus, since 2nd locus is not xlinked, so source number should be the same.
+    # 2nd locus (ABO) not xlinked, so source number is also 1 ~ 6.
     @test all(bush_matrix[:, :, 2] .== bush_matrix[:, :, 1])
 
     # 3rd locus (Xg) is xlinked, so males should only have 1 source while females have 2
@@ -52,12 +52,12 @@ srand(123)
     @test size(clinton_matrix) == (2, 3, 4) #clinton family have 3 people and 4 locus (instead of 5)
     @test eltype(clinton_matrix) == Int64
 
-    #1st locus (ABO) not xlinked, so each person (columns) should have 2 source
+    #1st locus (Rh) not xlinked, so each person (columns) should have 2 source
     @test clinton_matrix[:, 1, 1] == [1, 2]
     @test clinton_matrix[:, 2, 1] == [3, 4]
     @test clinton_matrix[:, 3, 1] == [0, 0] #only 2 are founders
 
-    # 2nd locus (Rh) = 1st locus, since the 2nd locus is not xlinked, so source number should be the same.
+    # 2nd locus (ABO) is not xlinked, so source number is also 1 ~ 6
     @test all(clinton_matrix[:, :, 2] .== clinton_matrix[:, :, 1])
     
     # 3rd locus (Xg) is xlinked, so males should only have 1 source while females have 2
@@ -291,6 +291,52 @@ end
         @test round(allele_6_dad/100000, 2) == 0.5       
     end
 
+    #next 2 locus are xlinked
+    for j in 3:4
+        allele_1_mom, allele_1_dad = 0, 0 #4th column 1st row 
+        allele_2_mom, allele_2_dad = 0, 0 #4th column 2nd row
+        allele_3_mom1, allele_3_dad1 = 0, 0 #5th column 1st row. needed 4 of these because that
+        allele_3_mom2, allele_3_dad2 = 0, 0 #person could have either of the 4 alleles from the 1st generation
+        allele_4_mom, allele_4_dad = 0, 0 #5th column 2nd row
+        allele_5_mom, allele_5_dad = 0, 0 #6th column 1st row
+        allele_6_mom, allele_6_dad = 0, 0 #6th column 2nd row
+        for i in 1:100000
+            (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+                person, locus, keyword, 1)
+            #4th column
+            if source[1, 4, j] == 3 allele_1_mom += 1 end
+            if source[1, 4, j] == 4 allele_1_dad += 1 end
+            if source[2, 4, j] == 1 allele_2_mom += 1 end
+            if source[2, 4, j] == 2 allele_2_dad += 1 end
+
+            #5th column
+            if source[1, 5, j] == 1 allele_3_mom1 += 1 end
+            if source[1, 5, j] == 2 allele_3_dad1 += 1 end
+            if source[1, 5, j] == 3 allele_3_mom2 += 1 end
+            if source[1, 5, j] == 4 allele_3_dad2 += 1 end
+            if source[2, 5, j] == 5 allele_4_mom += 1 end
+            if source[2, 5, j] == 6 allele_4_dad += 1 end
+            
+            #6th column
+            if source[1, 6, j] == 3 allele_5_mom += 1 end
+            if source[1, 6, j] == 4 allele_5_dad += 1 end
+            if source[2, 6, j] == 1 allele_6_mom += 1 end
+            if source[2, 6, j] == 2 allele_6_dad += 1 end        
+        end
+        @test round(allele_1_mom/100000, 2) == 0.5
+        @test round(allele_1_dad/100000, 2) == 0.5
+        @test round(allele_2_mom/100000, 2) == 1.0
+        @test round(allele_2_dad/100000, 2) == 0.0
+        @test round(allele_3_mom1/100000, 2) == 0.5
+        @test round(allele_3_dad1/100000, 2) == 0.0  
+        @test round(allele_3_mom2/100000, 2) == 0.25
+        @test round(allele_3_dad2/100000, 2) == 0.25
+        @test round(allele_5_mom/100000, 2) == 0.5
+        @test round(allele_5_dad/100000, 2) == 0.5
+        @test round(allele_6_mom/100000, 2) == 1.0
+        @test round(allele_6_dad/100000, 2) == 0.0       
+    end
+
     #
     # Now test for Clinton family.
     # 1st two locus are not xlinked, so probability half for all 
@@ -348,19 +394,109 @@ end
     #     if source[1, 4, 1] == 4 child1_allele2 += 1 end
     #     if source[1, 4, 2] == 1 child1_allele2 += 1 end
     # end
-
 end
 
 
 @testset "convert_sampled_genotype" begin
+    keyword = set_keyword_defaults!(Dict{AbstractString, Any}())
+    keyword["gene_drop_output"] = "Unordered"
+    keyword["interleaved"] = true
+    keyword["keep_founder_genotypes"] = false
+    keyword["missing_data_pattern"] = "ExistingData" # Not yet implemented.
+    keyword["missing_rate"] = 0.0
+    keyword["repetitions"] = 1
+    process_keywords!(keyword, "genedropping Control.txt", "")
+    (pedigree, person, nuclear_family, locus, snpdata,
+    locus_frame, phenotype_frame, pedigree_frame, snp_definition_frame) =
+        read_external_data_files(keyword)
+    separator = "/"
 
+    # first test clinton family, with 3 people only
+    (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+                person, locus, keyword, 2)
+    converted = MendelGeneDropping.convert_sampled_genotype(locus, 
+        sampled_genotype, separator, "Unordered")
+    @test size(converted) == (3, 4)
+    @test eltype(converted) <: AbstractString
 
-  #   convert_sampled_genotype(locus::Locus, sampled_genotype::Array{Int, 3},
-  # separator::AbstractString, gene_drop_output::AbstractString)
+    # locus.name is ["Rh", "ABO", "Xg", "XSNP"] because the PEdigreeFrame does 
+    # not have SNP as a header. So all information of SNP in locusframe is not included.
+    @test converted[:, 1] == ["D/d", "D/D", "D/d"] #1 = D, 2 = d... etc
+    @test converted[:, 2] == ["A/A", "A/A", "A/A"] 
+    @test converted[:, 3] == ["+/+", "-/+", "+/+"]
+    @test converted[:, 4] == ["2/2", "1/2", "2/2"]
+
+    # now test bush family
+    (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+            person, locus, keyword, 1)
+    converted = MendelGeneDropping.convert_sampled_genotype(locus, 
+        sampled_genotype, separator, "Unordered")
+    @test size(converted) == (6, 4)
+    @test eltype(converted) <: AbstractString
+    @test converted[:, 1] == ["D/D", "d/D", "D/d", "d/D", "d/D", "d/D"] #1 = D, 2 = d... etc
+    @test converted[:, 2] == ["A/A", "A/A", "A/A", "A/A", "A/A", "A/A"] 
+    @test converted[:, 3] == ["-/-", "+/+", "+/+", "+/-", "+/+", "+/-"]
+    @test converted[:, 4] == ["1/1", "2/1", "2/2", "2/1", "2/2", "2/1"]
 end
 
 
 
 @testset "basics & wrapper functions" begin
-    
+    keyword = set_keyword_defaults!(Dict{AbstractString, Any}())
+    keyword["gene_drop_output"] = "Unordered"
+    keyword["interleaved"] = true
+    keyword["keep_founder_genotypes"] = false
+    keyword["missing_data_pattern"] = "ExistingData" # Not yet implemented.
+    keyword["missing_rate"] = 0.0
+    keyword["repetitions"] = 1
+    process_keywords!(keyword, "genedropping Control.txt", "")
+    (pedigree, person, nuclear_family, locus, snpdata,
+    locus_frame, phenotype_frame, pedigree_frame, snp_definition_frame) =
+        read_external_data_files(keyword)
+
+    gene_drop = MendelGeneDropping.genedropping_option(pedigree, person, locus, 
+        locus_frame, phenotype_frame, pedigree_frame, keyword)
+
+    @test size(gene_drop) == (26, 17) #26 = 2 * 13, since 2 repetitions for each person
+    @test eltype(gene_drop) == Any
+
+    #testing if non-gene data is specified correctly
+    @test gene_drop[1, 1] == "Bush1"
+    @test gene_drop[1, 2] == "George"
+    @test isna(gene_drop[1, 3])
+    @test isna(gene_drop[1, 4])
+    @test gene_drop[5, 5] == "female"
+    @test gene_drop[6, 6] == 0
+
+    #now test if ABO locus is being dropped according to probability specified in locus frame
+    #can do so by looking at subset of population, like those who are 100% europeans
+    AA_count = 0
+    AB_count = 0
+    BA_count = 0
+    BB_count = 0
+    for i = 1:20000
+        gene_drop = MendelGeneDropping.genedropping_option(pedigree, person, locus, 
+            locus_frame, phenotype_frame, pedigree_frame, keyword)
+        if gene_drop[1, 12] == "A/A" AA_count+=1 end
+        if gene_drop[1, 12] == "A/B" AB_count+=1 end
+        if gene_drop[1, 12] == "B/A" BA_count+=1 end
+        if gene_drop[1, 12] == "B/B" BB_count+=1 end
+    end
+    A_freq = 0.27 / (0.27 + 0.06) #these are specified in locusFrame. 
+    B_freq = 0.06 / (0.27 + 0.06) #if person not 100% european, must adjust accordingly
+    @test AA_count + AB_count + BA_count + BB_count == 20000 #no other blood type 
+    @test round(AA_count/20000, 2) == round(A_freq^2, 2) 
+    @test round(AB_count/20000, 2) == round(A_freq * B_freq, 2)
+    @test round(BA_count/20000, 2) == round(A_freq * B_freq, 2) 
+    @test round(BB_count/20000, 2) == round(B_freq^2, 2)
+
+    final_test = GeneDropping("genedropping Control.txt")
+    @test final_test == nothing #if everything ran smoothly, "nothing" should be returned.
 end
+
+#current coverage = (158, 201) ≈ 78.6%
+
+
+
+
+
