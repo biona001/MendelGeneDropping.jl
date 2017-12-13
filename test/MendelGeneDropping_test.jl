@@ -5,6 +5,8 @@ using MendelGeneDropping
 srand(123)
 
 @testset "founder_source" begin
+    # Every slice is a different locus, with columns being different people and columns 
+    # being different alleles.
     keyword = set_keyword_defaults!(Dict{AbstractString, Any}())
     keyword["gene_drop_output"] = "Unordered"
     process_keywords!(keyword, "genedropping Control.txt", "")
@@ -29,7 +31,7 @@ srand(123)
     @test bush_matrix[:, 5, 1] == [0, 0]
     @test bush_matrix[:, 6, 1] == [0, 0]
 
-    # 2nd locus (Rh) = 1st locus, since the 2nd locus is not xlinked, so source number should be the same.
+    # 2nd locus (Rh) = 1st locus, since 2nd locus is not xlinked, so source number should be the same.
     @test all(bush_matrix[:, :, 2] .== bush_matrix[:, :, 1])
 
     # 3rd locus (Xg) is xlinked, so males should only have 1 source while females have 2
@@ -94,15 +96,15 @@ end
     end
 
     #since male && xlinked, must have [i i] with probability around 0.7, 0.2, 0.1
-    @test round(cat_1/10000, 1) == 7   
-    @test round(cat_2/10000, 1) == 0
-    @test round(cat_3/10000, 1) == 0
-    @test round(cat_4/10000, 1) == 0    
-    @test round(cat_5/10000, 1) == 2
-    @test round(cat_6/10000, 1) == 0
-    @test round(cat_7/10000, 1) == 0    
-    @test round(cat_8/10000, 1) == 0
-    @test round(cat_9/10000, 1) == 1
+    @test round(cat_1/100000, 1) == 0.7   
+    @test round(cat_2/100000, 1) == 0.0
+    @test round(cat_3/100000, 1) == 0.0
+    @test round(cat_4/100000, 1) == 0.0    
+    @test round(cat_5/100000, 1) == 0.2
+    @test round(cat_6/100000, 1) == 0.0
+    @test round(cat_7/100000, 1) == 0.0    
+    @test round(cat_8/100000, 1) == 0.0
+    @test round(cat_9/100000, 1) == 0.1
 
     cat_1, cat_2, cat_3 = 0, 0, 0
     cat_4, cat_5, cat_6 = 0, 0, 0
@@ -121,7 +123,7 @@ end
     end
 
     @test round(cat_1/100000, 2) == 0.49 #0.7 * 0.7
-    @test round(cat_2/100000, 2) == 0.14 #0.7 * 0.2
+    @test round(cat_2/100000, 2) == 0.14 #0.7 * 0.2 ...etc
     @test round(cat_3/100000, 2) == 0.07
     @test round(cat_4/100000, 2) == 0.14  
     @test round(cat_5/100000, 2) == 0.04
@@ -201,13 +203,13 @@ end
         if test == [3 3] cat_9 += 1 end                
     end
 
-    @test round(cat_1/100000, 2) == 0.76 # 1 1
-    @test round(cat_2/100000, 2) == 0.11 # 1 2
+    @test round(cat_1/100000, 2) == 0.76 # (1 1)
+    @test round(cat_2/100000, 2) == 0.11 # (1 2)
     @test round(cat_3/100000, 2) == 0.0
     @test round(cat_4/100000, 2) == 0.0 
     @test round(cat_5/100000, 2) == 0.0
-    @test round(cat_6/100000, 2) == 0.02 # 2 3
-    @test round(cat_7/100000, 2) == 0.11 # 3 1
+    @test round(cat_6/100000, 2) == 0.02 # (2 3)
+    @test round(cat_7/100000, 2) == 0.11 # (3 1)
     @test round(cat_8/100000, 2) == 0.0
     @test round(cat_9/100000, 2) == 0.0
 end
@@ -225,17 +227,136 @@ end
     locus_frame, phenotype_frame, pedigree_frame, snp_definition_frame) =
         read_external_data_files(keyword)
 
-    (sampled_genotype2, source2) = MendelGeneDropping.simulate_genotypes(pedigree, 
-        person, locus, keyword, 1) #only 3 pedigrees
+    (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+        person, locus, keyword, 1) #1st pedigree, with 6 people and 3 generations
 
+    @test size(sampled_genotype) == (2, 6, 4)
+    @test eltype(sampled_genotype) == Int64
+    @test all(sampled_genotype[:, :, :] .< 3) #test if value is 1 or 2
+    @test all(sampled_genotype[:, :, :] .> 0) #test if value is 1 or 2
 
+    # For foudners, check if sampled_genotype matrix and the founder matrix coincides
+    bush_matrix = MendelGeneDropping.founder_source(pedigree, person, locus, 1, 
+        keyword["gene_drop_output"])
+    @test size(source) == (2, 6, 4)
+    @test eltype(source) == Int64
+    @test all(source[:, 1:3, :] .== bush_matrix[:, 1:3, :])
 
+    #
+    # First test for bush family
+    # First two locus not xlinked
+    #
+    for j in 1:2
+        allele_1_mom, allele_1_dad = 0, 0 #4th column 1st row 
+        allele_2_mom, allele_2_dad = 0, 0 #4th column 2nd row
+        allele_3_mom1, allele_3_dad1 = 0, 0 #5th column 1st row. needed 4 of these because that
+        allele_3_mom2, allele_3_dad2 = 0, 0 #person could have either of the 4 alleles from the 1st generation
+        allele_4_mom, allele_4_dad = 0, 0 #5th column 2nd row
+        allele_5_mom, allele_5_dad = 0, 0 #6th column 1st row
+        allele_6_mom, allele_6_dad = 0, 0 #6th column 2nd row
+        for i in 1:100000
+            (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+                person, locus, keyword, 1)
+            #4th column
+            if source[1, 4, j] == 3 allele_1_mom += 1 end
+            if source[1, 4, j] == 4 allele_1_dad += 1 end
+            if source[2, 4, j] == 1 allele_2_mom += 1 end
+            if source[2, 4, j] == 2 allele_2_dad += 1 end
+
+            #5th column
+            if source[1, 5, j] == 1 allele_3_mom1 += 1 end
+            if source[1, 5, j] == 2 allele_3_dad1 += 1 end
+            if source[1, 5, j] == 3 allele_3_mom2 += 1 end
+            if source[1, 5, j] == 4 allele_3_dad2 += 1 end
+            if source[2, 5, j] == 5 allele_4_mom += 1 end
+            if source[2, 5, j] == 6 allele_4_dad += 1 end
+            
+            #6th column
+            if source[1, 6, j] == 3 allele_5_mom += 1 end
+            if source[1, 6, j] == 4 allele_5_dad += 1 end
+            if source[2, 6, j] == 1 allele_6_mom += 1 end
+            if source[2, 6, j] == 2 allele_6_dad += 1 end        
+        end
+        @test round(allele_1_mom/100000, 2) == 0.5
+        @test round(allele_1_dad/100000, 2) == 0.5
+        @test round(allele_2_mom/100000, 2) == 0.5
+        @test round(allele_2_dad/100000, 2) == 0.5
+        @test round(allele_3_mom1/100000, 2) == 0.25
+        @test round(allele_3_dad1/100000, 2) == 0.25  
+        @test round(allele_3_mom2/100000, 2) == 0.25
+        @test round(allele_3_dad2/100000, 2) == 0.25 
+        @test round(allele_5_mom/100000, 2) == 0.5
+        @test round(allele_5_dad/100000, 2) == 0.5
+        @test round(allele_6_mom/100000, 2) == 0.5
+        @test round(allele_6_dad/100000, 2) == 0.5       
+    end
+
+    #
+    # Now test for Clinton family.
+    # 1st two locus are not xlinked, so probability half for all 
+    #
+    for j in 1:2 
+        allele_1_mom, allele_1_dad = 0, 0
+        allele_2_mom, allele_2_dad = 0, 0
+        for i in 1:100000
+            (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+                person, locus, keyword, 2)
+            if source[1, 3, j] == 3 allele_1_mom += 1 end
+            if source[1, 3, j] == 4 allele_1_dad += 1 end
+            if source[2, 3, j] == 1 allele_2_mom += 1 end
+            if source[2, 3, j] == 2 allele_2_dad += 1 end
+        end
+        @test round(allele_1_mom/100000, 2) == 0.5
+        @test round(allele_1_dad/100000, 2) == 0.5
+        @test round(allele_2_mom/100000, 2) == 0.5
+        @test round(allele_2_dad/100000, 2) == 0.5
+    end
+
+    #last two locus are xlinked, so since 1st person is male, his allele will surely be inherited 
+    for j in 3:4 
+        allele_1_mom, allele_1_dad = 0, 0
+        allele_2_mom, allele_2_dad = 0, 0
+        for i in 1:100000
+            (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+                person, locus, keyword, 2)
+            if source[1, 3, j] == 3 allele_1_mom += 1 end
+            if source[1, 3, j] == 4 allele_1_dad += 1 end
+            if source[2, 3, j] == 1 allele_2_mom += 1 end
+            if source[2, 3, j] == 2 allele_2_dad += 1 end
+        end
+        @test round(allele_1_mom/100000, 2) == 0.5
+        @test round(allele_1_dad/100000, 2) == 0.5
+        @test round(allele_2_mom/100000, 2) == 1.0
+        @test round(allele_2_dad/100000, 2) == 0.0
+    end
+
+    # Compute frequency for each combination of pedigree and locus. 
+    # This can be done by running lines 245~283 in MendelGeneDropping.jl manually
+    # freq2 = [0.61, 0.39, 0.0] #ped 1 locus 1. This is actually locus Rh, so we call it freq2
+    # freq1 = [9/11, 2/11, 0.0, 0.0] #ped 1 locus 2. This is actually locus ABO 
+    # freq3 = [0.67, 0.33, 0.0] #ped 1 locus 3. This is locus Xg
+    # freq4 = [0.3, 0.7, 0.0] #ped 1 locus 4. This is locus XSNP
+
+    # child1_allele1, child1_allele2 = 0, 0
+    # child2_allele1, child2_allele2 = 0, 0
+    # child3_allele1, child3_allele1 = 0, 0
+
+    # for i in 1:100000
+    #     (sampled_genotype, source) = MendelGeneDropping.simulate_genotypes(pedigree, 
+    #         person, locus, keyword, 1)
+    #     if source[1, 4, 1] == 3 child1_allele1 += 1 end
+    #     if source[1, 4, 1] == 4 child1_allele2 += 1 end
+    #     if source[1, 4, 2] == 1 child1_allele2 += 1 end
+    # end
 
 end
 
 
 @testset "convert_sampled_genotype" begin
-    
+
+
+  #   convert_sampled_genotype(locus::Locus, sampled_genotype::Array{Int, 3},
+  # separator::AbstractString, gene_drop_output::AbstractString)
 end
 
 
