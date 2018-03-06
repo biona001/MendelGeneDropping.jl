@@ -457,14 +457,14 @@ end
     gene_drop = MendelGeneDropping.genedropping_option(pedigree, person, locus, 
         locus_frame, phenotype_frame, pedigree_frame, keyword)
 
-    @test size(gene_drop) == (26, 17) #26 = 2 * 13, since 2 repetitions for each person
+    @test size(gene_drop) == (26, 18) #26 = 2 * 13, since 2 repetitions for each person
     @test eltype(gene_drop) == Any
 
     #testing if non-gene data is specified correctly
     @test gene_drop[1, 1] == "Bush1"
     @test gene_drop[1, 2] == "George"
-    @test isna(gene_drop[1, 3])
-    @test isna(gene_drop[1, 4])
+    @test ismissing(gene_drop[1, 3])
+    @test ismissing(gene_drop[1, 4])
     @test gene_drop[5, 5] == "female"
     @test gene_drop[6, 6] == 0
 
